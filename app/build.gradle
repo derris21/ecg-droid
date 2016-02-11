@@ -23,6 +23,9 @@ dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:23.1.1'
-    compile 'com.mcxiaoke.volley:library:1.0.19'
     compile 'com.android.support:design:23.1.1'
+    compile 'com.mcxiaoke.volley:library:1.0.19'
+    compile 'com.bitalino:bitalino-java-sdk:1.0'
+    compile 'org.roboguice:roboguice:3.0b-experimental'
+    compile 'com.squareup.retrofit:retrofit:1.5.0'
 }
