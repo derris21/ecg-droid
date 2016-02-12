@@ -47,7 +47,7 @@ public class RecordActivity extends RoboActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_record);
 
         // execute
         if (!testInitiated)

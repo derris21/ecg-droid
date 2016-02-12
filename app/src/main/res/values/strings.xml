@@ -16,10 +16,31 @@
 
     <string name="welcome">Welcome</string>
     <string name="name">Fullname</string>
+    <string name="waiting">Waiting...</string>
 
 
     <string name="menu_setting">Settings</string>
     <string name="menu_logout">Logout</string>
     <string name="title_activity_dashboard">DashboardActivity</string>
     <string name="title_activity_record">RecordActivity</string>
+
+    <string name="lorem_ipsum">
+        Cupcake ipsum dolor sit amet tiramisu. Tootsie roll candy jelly beans jelly-o bear claw.
+        Macaroon pastry chocolate gummi bears danish. Apple pie cheesecake caramels lollipop cake
+        chocolate cake candy canes I love I love. Topping sweet roll carrot cake cheesecake jelly.
+        I love powder muffin. Gummi bears dragée croissant. Gummi bears brownie lollipop pastry
+        macaroon fruitcake candy canes dragée. Dragée danish lollipop I love chocolate cake.
+        Sugar plum cake biscuit bear claw jelly-o cupcake dessert cheesecake. I love toffee I love
+        lemon drops macaroon. Pie soufflé lemon drops. Muffin I love sweet chocolate danish candy
+        canes pudding cake. Chocolate bar jujubes pastry. Chocolate bar sugar plum pie I love candy
+        canes powder donut cotton candy. Tiramisu apple pie muffin oat cake bear claw jelly cookie
+        apple pie marzipan. I love cheesecake marzipan chocolate sugar plum croissant gummi bears
+        croissant. Marzipan lollipop lollipop. Ice cream cupcake lollipop jelly dragée. Cake powder
+        I love I love donut gummies. Marzipan apple pie liquorice tiramisu. Tart topping marshmallow
+        jelly sesame snaps danish sweet roll cake. Sweet I love cake tiramisu chupa chups jelly-o
+        jelly beans macaroon sweet. Candy cake tart ice cream ice cream sesame snaps I love pie
+        halvah. Marzipan powder donut. Chocolate bar liquorice gummies lollipop pastry liquorice
+        carrot cake. Bear claw cake chocolate bar chocolate bar powder marzipan tiramisu
+        marshmallow gingerbread.
+    </string>
 </resources>

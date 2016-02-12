@@ -10,60 +10,47 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
     tools:context="com.ilham1012.ecgbpi.activity.DashboardActivity"
-    tools:showIn="@layout/activity_dashboard"
-    android:background="@color/windowBackground">
+    tools:showIn="@layout/activity_dashboard">
 
-    <LinearLayout
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="20dp"
-        android:layout_marginRight="20dp"
-        android:gravity="center"
-        android:orientation="vertical" >
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/listViewRecords"
+        android:layout_width="match_parent"
+        android:layout_height="300dp">
+    </android.support.v7.widget.RecyclerView>
+    <!--<LinearLayout-->
+        <!--android:layout_width="fill_parent"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--android:layout_marginLeft="20dp"-->
+        <!--android:layout_marginRight="20dp"-->
+        <!--android:gravity="center"-->
+        <!--android:orientation="vertical" >-->
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/welcome"
-            android:textSize="20dp"
-            android:textColor="@color/lbl_name"/>
+        <!--<Button-->
+            <!--android:id="@+id/btnDoRecord"-->
+            <!--android:layout_width="fill_parent"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:layout_marginTop="40dip"-->
+            <!--android:background="@color/btn_logut_bg"-->
+            <!--android:text="@string/btn_do_record"-->
+            <!--android:textAllCaps="false"-->
+            <!--android:textColor="@color/white"-->
+            <!--android:textSize="15dp" />-->
 
-        <TextView
-            android:id="@+id/name"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:padding="10dp"
-            android:textColor="@color/asphaltLight"
-            android:textSize="24dp" />
+        <!--<Button-->
+            <!--android:id="@+id/btnBrowseRecord"-->
+            <!--android:layout_width="fill_parent"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:layout_marginTop="40dip"-->
+            <!--android:background="@color/btn_login_bg"-->
+            <!--android:text="@string/btn_browse_record"-->
+            <!--android:textAllCaps="false"-->
+            <!--android:textColor="@color/white"-->
+            <!--android:textSize="15dp" />-->
 
-        <TextView
-            android:id="@+id/email"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@color/greyLighter"
-            android:textSize="13dp" />
-
-        <Button
-            android:id="@+id/btnDoRecord"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="40dip"
-            android:background="@color/btn_logut_bg"
-            android:text="@string/btn_do_record"
-            android:textAllCaps="false"
-            android:textColor="@color/white"
-            android:textSize="15dp" />
-
-        <Button
-            android:id="@+id/btnBrowseRecord"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="40dip"
-            android:background="@color/btn_login_bg"
-            android:text="@string/btn_browse_record"
-            android:textAllCaps="false"
-            android:textColor="@color/white"
-            android:textSize="15dp" />
-    </LinearLayout>
+        <!--<TextView-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:text="@string/lorem_ipsum"/>-->
+    <!--</LinearLayout>-->
 
 </RelativeLayout>
