@@ -14,6 +14,7 @@ import android.view.View;
 import android.widget.Toast;
 
 import com.ilham1012.ecgbpi.R;
+import com.ilham1012.ecgbpi.helper.ListAdapter;
 import com.ilham1012.ecgbpi.helper.SQLiteHandler;
 import com.ilham1012.ecgbpi.helper.SessionManager;
 
@@ -26,7 +27,7 @@ public class DashboardActivity extends AppCompatActivity {
     private CollapsingToolbarLayout collapsingToolbarLayout;
     private FloatingActionButton fabBtn;
     private RecyclerView recyclerView;
-    private RecyclerView.Adapter mAdapter;
+    private ListAdapter mAdapter;
     private RecyclerView.LayoutManager mLayoutManager;
 
     private String[] listTitles;
@@ -71,7 +72,7 @@ public class DashboardActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(mLayoutManager);
 
         // specify an adapter (see also next example)
-        mAdapter = new MyAdapter(myDataset);
+        mAdapter = new ListAdapter(myDataset);
         recyclerView.setAdapter(mAdapter);
 
 
@@ -101,7 +102,7 @@ public class DashboardActivity extends AppCompatActivity {
         fillListData();
 //        ListAdapter adapter = new ListAdapter(getBaseContext(), listTitles, listSubtitles);
 
-        recyclerView.setAdapter(adapter);
+        recyclerView.setAdapter(mAdapter);
 
 
         fabBtn.setOnClickListener(new View.OnClickListener() {
