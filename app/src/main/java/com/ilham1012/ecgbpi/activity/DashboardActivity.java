@@ -14,11 +14,14 @@ import android.view.View;
 import android.widget.Toast;
 
 import com.ilham1012.ecgbpi.R;
-import com.ilham1012.ecgbpi.helper.ListAdapter;
+import com.ilham1012.ecgbpi.helper.RVAdapter;
 import com.ilham1012.ecgbpi.helper.SQLiteHandler;
 import com.ilham1012.ecgbpi.helper.SessionManager;
+import com.ilham1012.ecgbpi.model.EcgRecord;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public class DashboardActivity extends AppCompatActivity {
 
@@ -27,11 +30,7 @@ public class DashboardActivity extends AppCompatActivity {
     private CollapsingToolbarLayout collapsingToolbarLayout;
     private FloatingActionButton fabBtn;
     private RecyclerView recyclerView;
-    private ListAdapter mAdapter;
-    private RecyclerView.LayoutManager mLayoutManager;
-
-    private String[] listTitles;
-    private String[] listSubtitles;
+    private List<EcgRecord> ecgRecords;
 
 
 
@@ -58,25 +57,15 @@ public class DashboardActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         collapsingToolbarLayout = (CollapsingToolbarLayout) findViewById(R.id.collapsing_toolbar);
         fabBtn = (FloatingActionButton)findViewById(R.id.fab);
-        recyclerView = (RecyclerView) findViewById(R.id.listViewRecords);
+        recyclerView = (RecyclerView)findViewById(R.id.list_view_records);
 
         setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-
-        // use this setting to improve performance if you know that changes
-        // in content do not change the layout size of the RecyclerView
+//        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         recyclerView.setHasFixedSize(true);
-
-        // use a linear layout manager
-        mLayoutManager = new LinearLayoutManager(this);
-        recyclerView.setLayoutManager(mLayoutManager);
-
-        // specify an adapter (see also next example)
-        mAdapter = new ListAdapter(myDataset);
-        recyclerView.setAdapter(mAdapter);
-
-
         //collapsingToolbarLayout.setExpandedTitleColor(getResources().getColor(android.R.color.transparent));
+
+        LinearLayoutManager llm = new LinearLayoutManager(getBaseContext());
+        recyclerView.setLayoutManager(llm);
 
         // Sqlite db handler
         db = new SQLiteHandler(getApplicationContext());
@@ -97,13 +86,8 @@ public class DashboardActivity extends AppCompatActivity {
         // Displaying the user details on the screen
         collapsingToolbarLayout.setTitle(name);
 
-
-
-        fillListData();
-//        ListAdapter adapter = new ListAdapter(getBaseContext(), listTitles, listSubtitles);
-
-        recyclerView.setAdapter(mAdapter);
-
+        initializeData();
+        initializeAdapter();
 
         fabBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -115,18 +99,32 @@ public class DashboardActivity extends AppCompatActivity {
         });
     }
 
-    private void fillListData(){
-        /**
-         * Dummy Data
-         */
+    /**
+     * Dummy data for examples only
+     */
 
-        listTitles = new String[]{"Recording 1", "Test Recording", "Just Test", "OK, test again",
-                "Recording n", "Patient Name", "What Else?", "Aigooo", "Record no 3",
-                "Morning Record", "ECG BPI", "BITalino", "BioSignal", "Lab Desain", "After Squat"};
+    private void initializeData(){
+        ecgRecords = new ArrayList<>();
+        ecgRecords.add(new EcgRecord(1,  1, "2016-02-06 10:38:19", "test", "test.txt"));
+        ecgRecords.add(new EcgRecord(2,  1, "2016-02-06 10:47:27", "test 2", "test-2.txt"));
+        ecgRecords.add(new EcgRecord(3,  1, "2016-02-06 10:49:20", "Morning Record", "morning.txt"));
+        ecgRecords.add(new EcgRecord(4,  1, "2016-02-06 10:50:19", "Let's test", "testttt.txt"));
+        ecgRecords.add(new EcgRecord(5,  1, "2016-02-06 10:53:27", "Ok, test again", "test-2000.txt"));
+        ecgRecords.add(new EcgRecord(6,  1, "2016-02-06 10:59:20", "Night Record", "night.txt"));
+        ecgRecords.add(new EcgRecord(7,  1, "2016-02-06 11:38:19", "test 3", "test3.txt"));
+        ecgRecords.add(new EcgRecord(8,  1, "2016-02-06 11:47:27", "test 23", "test-23.txt"));
+        ecgRecords.add(new EcgRecord(9,  1, "2016-02-06 11:49:20", "Morning Record 2", "morning2.txt"));
+        ecgRecords.add(new EcgRecord(10, 1, "2016-02-06 11:50:19", "Let's test 2", "testttt2.txt"));
+        ecgRecords.add(new EcgRecord(11, 1, "2016-02-06 11:53:27", "Ok, test again 2", "test-20002.txt"));
+        ecgRecords.add(new EcgRecord(12, 1, "2016-02-06 11:59:20", "Night Record 2", "night2.txt"));
+        ecgRecords.add(new EcgRecord(13, 1, "2016-02-06 12:50:19", "Let's test 3", "testttt3.txt"));
+        ecgRecords.add(new EcgRecord(14, 1, "2016-02-06 12:53:27", "Ok, test again 3", "test-20003.txt"));
+        ecgRecords.add(new EcgRecord(15, 1, "2016-02-06 12:59:20", "Night Record 3", "night3.txt"));
+    }
 
-        listSubtitles = new String[] {"1/02/2016", "1/02/2016", "3/02/2016", "4/02/2016", "5/02/2016",
-                "5/02/2016", "5/02/2016", "6/02/2016", "7/02/2016", "8/02/2016",
-                "10/02/2016", "10/02/2016", "10/02/2016", "11/02/2016", "11/02/2016"};
+    private void initializeAdapter(){
+        RVAdapter adapter = new RVAdapter(ecgRecords);
+        recyclerView.setAdapter(adapter);
     }
 
 

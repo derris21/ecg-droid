@@ -25,15 +25,15 @@
         <android.support.design.widget.CollapsingToolbarLayout
             android:id="@+id/collapsing_toolbar"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            app:layout_scrollFlags="scroll|exitUntilCollapsed">
+            android:layout_height="match_parent">
+            <!--app:layout_scrollFlags="scroll|exitUntilCollapsed">-->
 
             <android.support.v7.widget.Toolbar
                 android:id="@+id/toolbar"
                 android:layout_height="?attr/actionBarSize"
                 android:layout_width="match_parent"
-                android:background="?attr/colorPrimary"
-                app:layout_collapseMode="pin"/>
+                android:background="?attr/colorPrimary"/>
+                <!--app:layout_collapseMode="pin"/>-->
 
         </android.support.design.widget.CollapsingToolbarLayout>
 
