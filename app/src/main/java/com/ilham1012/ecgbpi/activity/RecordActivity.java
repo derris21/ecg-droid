@@ -3,6 +3,7 @@ package com.ilham1012.ecgbpi.activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -11,12 +12,15 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.bitalino.comm.BITalinoDevice;
 import com.bitalino.comm.BITalinoFrame;
+import com.ilham1012.ecgbpi.POJO.EcgRecord;
 import com.ilham1012.ecgbpi.R;
 import com.ilham1012.ecgbpi.helper.BITalinoReading;
 import com.ilham1012.ecgbpi.helper.ReadingService;
+import com.ilham1012.ecgbpi.helper.SQLiteHandler;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -47,21 +51,35 @@ public class RecordActivity extends RoboActivity {
     private boolean testInitiated = false;
     private Button startBtn;
     private Button stopBtn;
+    private EcgRecord ecgRecord;
+    private SQLiteHandler db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_record);
 
+        ecgRecord = new EcgRecord();
+
+        Bundle extras = getIntent().getExtras();
+        ecgRecord.recording_name = extras.getString("recording_name");
+
+        this.setTitle(ecgRecord.recording_name);
+
+        db = new SQLiteHandler(getBaseContext());
+
         startBtn = (Button) findViewById(R.id.btnStartRecord);
         stopBtn = (Button) findViewById(R.id.btnStopRecord);
 
+        stopBtn.setClickable(false);
         stopBtn.setActivated(false);
 
         startBtn.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
+                startBtn.setClickable(false);
                 startBtn.setActivated(false);
+                stopBtn.setClickable(true);
                 stopBtn.setActivated(true);
                 startRecording();
             }
@@ -82,13 +100,27 @@ public class RecordActivity extends RoboActivity {
     private void startRecording() {
 
         // execute
-        //if (!testInitiated){
-        //    new TestAsyncTask.execute();
-        //}
+//        if (!testInitiated){
+//            new TestAsyncTask().execute();
+//        }
+
+        Long tsLong = System.currentTimeMillis()/1000;
+        ecgRecord.recording_time = tsLong.toString();
+
+        Toast.makeText(getApplicationContext(),
+                "Record start at " + ecgRecord.recording_time, Toast.LENGTH_LONG).show();
     }
 
     private void stopRecording() {
 
+        db.addEcgRecord(1, ecgRecord.recording_time, ecgRecord.recording_name, "test.txt");
+        Toast.makeText(getApplicationContext(),
+                "Record " + ecgRecord.recording_name + " has been saved", Toast.LENGTH_LONG).show();
+
+        Intent intent = new Intent(RecordActivity.this, DashboardNewActivity.class);
+        startActivity(intent);
+
+        finish();
     }
 
 
@@ -111,25 +143,25 @@ public class RecordActivity extends RoboActivity {
         protected Void doInBackground(Void... paramses) {
             try {
                 // Let's get the remote Bluetooth device
-                final String remoteDevice = "20:13:08:08:15:83";
+                final String remoteDevice = "98:D3:31:90:3E:00";
 
                 final BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
                 dev = btAdapter.getRemoteDevice(remoteDevice);
 
-    /*
-     * Establish Bluetooth connection
-     *
-     * Because discovery is a heavyweight procedure for the Bluetooth adapter,
-     * this method should always be called before attempting to connect to a
-     * remote device with connect(). Discovery is not managed by the Activity,
-     * but is run as a system service, so an application should always call
-     * cancel discovery even if it did not directly request a discovery, just to
-     * be sure. If Bluetooth state is not STATE_ON, this API will return false.
-     *
-     * see
-     * http://developer.android.com/reference/android/bluetooth/BluetoothAdapter
-     * .html#cancelDiscovery()
-     */
+                /*
+                 * Establish Bluetooth connection
+                 *
+                 * Because discovery is a heavyweight procedure for the Bluetooth adapter,
+                 * this method should always be called before attempting to connect to a
+                 * remote device with connect(). Discovery is not managed by the Activity,
+                 * but is run as a system service, so an application should always call
+                 * cancel discovery even if it did not directly request a discovery, just to
+                 * be sure. If Bluetooth state is not STATE_ON, this API will return false.
+                 *
+                 * see
+                 * http://developer.android.com/reference/android/bluetooth/BluetoothAdapter
+                 * .html#cancelDiscovery()
+                 */
                 Log.d(TAG, "Stopping Bluetooth discovery.");
                 btAdapter.cancelDiscovery();
 

@@ -170,7 +170,7 @@ public class SQLiteHandler extends SQLiteOpenHelper{
      * @param time
      * @param fileUrl
      * */
-    public boolean addEcgRecord(int userId, String name, String time, String fileUrl) {
+    public boolean addEcgRecord(int userId, String time, String name, String fileUrl) {
         SQLiteDatabase db = this.getWritableDatabase();
 
         ContentValues values = new ContentValues();
@@ -229,10 +229,10 @@ public class SQLiteHandler extends SQLiteOpenHelper{
     public void deleteEcgRecordTable() {
         SQLiteDatabase db = this.getWritableDatabase();
         // Delete All Rows
-        db.delete(TABLE_USER, null, null);
+        db.delete(TABLE_ECG_RECORDING, null, null);
         db.close();
 
-        Log.d(TAG, "Deleted all user info from sqlite");
+        Log.d(TAG, "Deleted all ecg record from sqlite");
     }
 
 }

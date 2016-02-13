@@ -1,20 +1,23 @@
 package com.ilham1012.ecgbpi.activity;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.SimpleCursorAdapter;
 import android.widget.Toast;
-import android.widget.AdapterView.OnItemClickListener;
 
 import com.ilham1012.ecgbpi.R;
 import com.ilham1012.ecgbpi.helper.SQLiteHandler;
@@ -39,16 +42,22 @@ public class DashboardNewActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-                Intent intent = new Intent(DashboardNewActivity.this,
-                        RecordActivity.class);
-                startActivity(intent);
+//                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+//                        .setAction("Action", null).show();
+                displayAlertDialog();
+
+
             }
         });
 
         // Sqlite db handler
         db = new SQLiteHandler(getApplicationContext());
+
+        /**
+         * Initialize records
+         * FOR SAMPLE DATA ONLY
+         */
+//        db.deleteEcgRecordTable();
 //        db.initializeSampleData();
 
         // Session manager
@@ -59,6 +68,35 @@ public class DashboardNewActivity extends AppCompatActivity {
         }
 
         displayListView();
+
+    }
+
+
+
+    private void displayAlertDialog(){
+        AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(this);
+        LayoutInflater inflater = this.getLayoutInflater();
+        final View dialogView = inflater.inflate(R.layout.dialog_new_record, null);
+        dialogBuilder.setView(dialogView);
+
+        final EditText edt = (EditText) dialogView.findViewById(R.id.dialog_recording_name);
+
+        dialogBuilder.setPositiveButton("Done", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int whichButton) {
+                //do something with edt.getText().toString();
+                Intent i = new Intent(DashboardNewActivity.this, RecordActivity.class);
+                i.putExtra("recording_name", edt.getText().toString());
+                startActivity(i);
+                finish();
+            }
+        });
+        dialogBuilder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int whichButton) {
+                //pass
+            }
+        });
+        AlertDialog b = dialogBuilder.create();
+        b.show();
 
     }
 

@@ -10,6 +10,10 @@ public class EcgRecord {
     public String recording_name;
     String file_url;
 
+    public EcgRecord(){
+
+    }
+
     public EcgRecord(int recording_id, int user_id, String recording_time, String recording_name, String file_url){
         this.recording_id = recording_id;
         this.user_id = user_id;
