@@ -1,7 +1,7 @@
 package com.ilham1012.ecgbpi.POJO;
 
 /**
- * Created by Lab Desain 2 on 12/02/2016.
+ * Created by ilham on 12/02/2016.
  */
 public class EcgRecord {
     int recording_id;
