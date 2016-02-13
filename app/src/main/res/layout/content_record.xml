@@ -15,7 +15,8 @@
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:id="@+id/scrollView" >
 
         <TextView
@@ -34,27 +35,27 @@
         android:orientation="horizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="2">
+        >
 
         <Button
             android:id="@+id/btnStartRecord"
             android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dip"
+            android:layout_marginRight="5dp"
             android:background="@color/btn_login_bg"
             android:text="Start"
-            android:textColor="@color/btn_login_text"
-            tools:ignore="Suspicious0dp" />
+            android:textColor="@color/btn_login_text"/>
 
         <Button
             android:id="@+id/btnStopRecord"
             android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dip"
+            android:layout_marginLeft="5dp"
             android:background="@color/btn_login_bg"
             android:text="Stop"
-            android:textColor="@color/btn_login_text"
-            tools:ignore="Suspicious0dp" />
+            android:textColor="@color/btn_login_text"/>
     </LinearLayout>
 
 
