@@ -17,7 +17,7 @@ import com.ilham1012.ecgbpi.R;
 import com.ilham1012.ecgbpi.helper.RVAdapter;
 import com.ilham1012.ecgbpi.helper.SQLiteHandler;
 import com.ilham1012.ecgbpi.helper.SessionManager;
-import com.ilham1012.ecgbpi.model.EcgRecord;
+import com.ilham1012.ecgbpi.POJO.EcgRecord;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -41,7 +41,7 @@ public class DashboardActivity extends AppCompatActivity {
     private void logoutUser() {
         session.setLogin(false);
 
-        db.deleteUsers();
+        db.deleteUserTable();
 
         // Launching the login activity
         Intent intent = new Intent(DashboardActivity.this, LoginActivity.class);

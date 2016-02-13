@@ -7,10 +7,16 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.Button;
 import android.widget.TextView;
 
 import com.bitalino.comm.BITalinoDevice;
 import com.bitalino.comm.BITalinoFrame;
+import com.ilham1012.ecgbpi.R;
+import com.ilham1012.ecgbpi.helper.BITalinoReading;
+import com.ilham1012.ecgbpi.helper.ReadingService;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -20,10 +26,6 @@ import retrofit.RestAdapter;
 import retrofit.client.Response;
 import roboguice.activity.RoboActivity;
 import roboguice.inject.InjectView;
-
-import com.ilham1012.ecgbpi.R;
-import com.ilham1012.ecgbpi.helper.BITalinoReading;
-import com.ilham1012.ecgbpi.helper.ReadingService;
 
 public class RecordActivity extends RoboActivity {
 
@@ -43,16 +45,52 @@ public class RecordActivity extends RoboActivity {
     @InjectView(R.id.log)
     private TextView tvLog;
     private boolean testInitiated = false;
+    private Button startBtn;
+    private Button stopBtn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_record);
 
-        // execute
-        if (!testInitiated)
-            new TestAsyncTask().execute();
+        startBtn = (Button) findViewById(R.id.btnStartRecord);
+        stopBtn = (Button) findViewById(R.id.btnStopRecord);
+
+        stopBtn.setActivated(false);
+
+        startBtn.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startBtn.setActivated(false);
+                stopBtn.setActivated(true);
+                startRecording();
+            }
+        });
+
+        stopBtn.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                stopRecording();
+            }
+        });
+
+
     }
+
+
+
+    private void startRecording() {
+
+        // execute
+        //if (!testInitiated){
+        //    new TestAsyncTask.execute();
+        //}
+    }
+
+    private void stopRecording() {
+
+    }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -159,10 +197,10 @@ public class RecordActivity extends RoboActivity {
             // stop acquisition and close bluetooth connection
             try {
                 bitalino.stop();
-                publishProgress("BITalino is stopped");
+//                publishProgress("BITalino is stopped");
 
                 sock.close();
-                publishProgress("And we're done! :-)");
+//                publishProgress("And we're done! :-)");
             } catch (Exception e) {
                 Log.e(TAG, "There was an error.", e);
             }

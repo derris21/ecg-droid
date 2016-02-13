@@ -6,10 +6,9 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.ilham1012.ecgbpi.R;
-import com.ilham1012.ecgbpi.model.EcgRecord;
+import com.ilham1012.ecgbpi.POJO.EcgRecord;
 
 import java.util.List;
 
