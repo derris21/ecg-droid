@@ -44,17 +44,7 @@
             android:layout_height="wrap_content"
             android:layout_marginRight="5dp"
             android:background="@color/btn_login_bg"
-            android:text="Start"
-            android:textColor="@color/btn_login_text"/>
-
-        <Button
-            android:id="@+id/btnStopRecord"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="5dp"
-            android:background="@color/btn_login_bg"
-            android:text="Stop"
+            android:text="Start Recording"
             android:textColor="@color/btn_login_text"/>
     </LinearLayout>
 

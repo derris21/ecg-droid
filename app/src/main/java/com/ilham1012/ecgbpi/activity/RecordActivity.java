@@ -3,9 +3,9 @@ package com.ilham1012.ecgbpi.activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
-import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
@@ -20,13 +20,22 @@ import com.ilham1012.ecgbpi.POJO.EcgRecord;
 import com.ilham1012.ecgbpi.POJO.EcgRecordService;
 import com.ilham1012.ecgbpi.R;
 import com.ilham1012.ecgbpi.helper.SQLiteHandler;
+import com.ilham1012.ecgbpi.services.FileUploadService;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.util.UUID;
 
+import retrofit.Callback;
 import retrofit.RestAdapter;
+import retrofit.RetrofitError;
 import retrofit.client.Response;
+import retrofit.mime.TypedFile;
 import roboguice.activity.RoboActivity;
 import roboguice.inject.InjectView;
 
@@ -49,13 +58,15 @@ public class RecordActivity extends RoboActivity {
             .fromString("00001101-0000-1000-8000-00805F9B34FB");
     @InjectView(R.id.log)
     private TextView tvLog;
+    private boolean recordingOn = false;
     private boolean testInitiated = false;
     private Button startBtn;
-    private Button stopBtn;
+//    private Button stopBtn;
     private EcgRecord ecgRecord;
     private SQLiteHandler db;
     private TestAsyncTask testAsyncTask;
     private Long tsLong;
+    private String tempData = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,28 +86,37 @@ public class RecordActivity extends RoboActivity {
         db = new SQLiteHandler(getBaseContext());
 
         startBtn = (Button) findViewById(R.id.btnStartRecord);
-        stopBtn = (Button) findViewById(R.id.btnStopRecord);
-
-        stopBtn.setClickable(false);
-        stopBtn.setActivated(false);
+//        stopBtn = (Button) findViewById(R.id.btnStopRecord);
+//
+//        stopBtn.setClickable(false);
+//        stopBtn.setActivated(false);
 
         startBtn.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                startBtn.setClickable(false);
-                startBtn.setActivated(false);
-                stopBtn.setClickable(true);
-                stopBtn.setActivated(true);
-                startRecording();
+//                startBtn.setClickable(false);
+//                startBtn.setActivated(false);
+//                stopBtn.setClickable(true);
+//                stopBtn.setActivated(true);
+
+                if(! recordingOn){
+                    startRecording();
+                    startBtn.setText("Stop Recording");
+                    recordingOn = true;
+                }else{
+                    stopRecording();
+                    startBtn.setText("Start Recording");
+                    recordingOn = false;
+                }
             }
         });
 
-        stopBtn.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                stopRecording();
-            }
-        });
+//        stopBtn.setOnClickListener(new OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                stopRecording();
+//            }
+//        });
 
 
     }
@@ -128,10 +148,97 @@ public class RecordActivity extends RoboActivity {
         Toast.makeText(getApplicationContext(),
                 "Record " + ecgRecord.getRecordingName() + " has been saved", Toast.LENGTH_LONG).show();
 
-        Intent intent = new Intent(RecordActivity.this, DashboardNewActivity.class);
-        startActivity(intent);
+//        Intent intent = new Intent(RecordActivity.this, DashboardNewActivity.class);
+//        startActivity(intent);
+//
+//        finish();
 
-        finish();
+        checkExternalMedia();
+        writeToSDFile();
+        uploadFile();
+    }
+
+    /** Method to check whether external media available and writable. This is adapted from
+     http://developer.android.com/guide/topics/data/data-storage.html#filesExternal */
+
+    private void checkExternalMedia(){
+        boolean mExternalStorageAvailable = false;
+        boolean mExternalStorageWriteable = false;
+        String state = Environment.getExternalStorageState();
+
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            // Can read and write the media
+            mExternalStorageAvailable = mExternalStorageWriteable = true;
+        } else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+            // Can only read the media
+            mExternalStorageAvailable = true;
+            mExternalStorageWriteable = false;
+        } else {
+            // Can't read or write
+            mExternalStorageAvailable = mExternalStorageWriteable = false;
+        }
+        Log.i(TAG, "External Media: readable="
+                +mExternalStorageAvailable+" writable="+mExternalStorageWriteable);
+    }
+
+    /** Method to write ascii text characters to file on SD card. Note that you must add a
+     WRITE_EXTERNAL_STORAGE permission to the manifest file or this method will throw
+     a FileNotFound Exception because you won't have write permission. */
+
+    private void writeToSDFile(){
+
+        // Find the root of the external storage.
+        // See http://developer.android.com/guide/topics/data/data-  storage.html#filesExternal
+
+        File root = android.os.Environment.getExternalStorageDirectory();
+        Log.i(TAG, "External file system root: "+root);
+
+        // See http://stackoverflow.com/questions/3551821/android-write-to-sd-card-folder
+
+        File dir = new File (root.getAbsolutePath() + "/ecgbpi/ecgrecord/");
+        dir.mkdirs();
+        File file = new File(dir, ecgRecord.getFileUrl());
+
+        try {
+            FileOutputStream f = new FileOutputStream(file);
+            PrintWriter pw = new PrintWriter(f);
+            pw.print("[");
+            pw.print(tempData);
+            pw.print("]");
+            pw.flush();
+            pw.close();
+            f.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            Log.i(TAG, "******* File not found. Did you" +
+                    " add a WRITE_EXTERNAL_STORAGE permission to the   manifest?");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        Log.i(TAG, "File written to "+file);
+    }
+
+    private void uploadFile(){
+        File root = android.os.Environment.getExternalStorageDirectory();
+
+        RestAdapter restAdapter2 = new RestAdapter.Builder()
+                                .setEndpoint(API_BASE_URL)
+                                .build();
+        FileUploadService fileUploadService = restAdapter2.create(FileUploadService.class);
+        TypedFile typedFile = new TypedFile("multipart/form-data", new File(root.getAbsolutePath() + "/ecgbpi/ecgrecord/" + ecgRecord.getFileUrl()));
+        String description = "hello, this is description speaking";
+
+        fileUploadService.upload(typedFile, description, new Callback<String>() {
+            @Override
+            public void success(String s, Response response) {
+                Log.e("Upload", "success " + response.getStatus());
+            }
+
+            @Override
+            public void failure(RetrofitError error) {
+                Log.e("Upload", "error " + error.getMessage());
+            }
+        });
     }
 
 
@@ -239,8 +346,10 @@ public class RecordActivity extends RoboActivity {
                     }
 
                     // present data in screen
-                    for (BITalinoFrame frame : frames)
+                    for (BITalinoFrame frame : frames) {
                         publishProgress(frame.toString());
+                        tempData = tempData + frame.getAnalog(selChannels[0]) + ", ";
+                    }
 
                     counter++;
                 }
@@ -265,6 +374,8 @@ public class RecordActivity extends RoboActivity {
         @Override
         protected void onCancelled() {
             stopTask();
+            checkExternalMedia();
+            writeToSDFile();
         }
 
         public void stopTask(){
@@ -279,6 +390,9 @@ public class RecordActivity extends RoboActivity {
                 Log.e(TAG, "There was an error.", e);
             }
         }
+
+
+
 
     }
 
