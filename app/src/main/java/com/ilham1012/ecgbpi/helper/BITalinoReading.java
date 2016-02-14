@@ -22,6 +22,7 @@ import com.bitalino.comm.BITalinoFrame;
 public class BITalinoReading {
 
     private long timestamp;
+    private String frameString;
     private BITalinoFrame[] frames;
 
     public BITalinoReading() {
@@ -47,5 +48,7 @@ public class BITalinoReading {
     public void setFrames(BITalinoFrame[] frames) {
         this.frames = frames;
     }
+
+    public void setFrameString(String frameString) { this.frameString = frameString; }
 
 }

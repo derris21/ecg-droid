@@ -17,7 +17,6 @@ package com.ilham1012.ecgbpi.helper;
  */
 
 
-import retrofit.Callback;
 import retrofit.client.Response;
 import retrofit.http.Body;
 import retrofit.http.PUT;
@@ -27,7 +26,7 @@ import retrofit.http.PUT;
  */
 public interface ReadingService {
 
-    @PUT("/")
+    @PUT("/bitalino/")
     Response uploadReading(@Body BITalinoReading reading);
 
 }

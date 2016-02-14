@@ -11,9 +11,6 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.SyncResult;
 import android.os.Bundle;
-import android.os.RemoteException;
-
-import java.io.IOException;
 
 /**
  * Handle the transfer of data between a server and an
@@ -59,11 +56,11 @@ public class SyncAdapter extends AbstractThreadedSyncAdapter {
                               ContentProviderClient contentProviderClient, SyncResult syncResult) {
         // naive implementation, delete and replace everything
         SyncResult result = new SyncResult();
-        try {
-//            deleteSports(contentProviderClient);
-//            insertSports(contentProviderClient);
-        } catch (RemoteException | IOException e) {
-            syncResult.hasHardError();
-        }
+//        try {
+////            deleteSports(contentProviderClient);
+////            insertSports(contentProviderClient);
+//        } catch (RemoteException | IOException e) {
+//            syncResult.hasHardError();
+//        }
     }
 }

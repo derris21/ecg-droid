@@ -17,9 +17,8 @@ import android.widget.Toast;
 import com.bitalino.comm.BITalinoDevice;
 import com.bitalino.comm.BITalinoFrame;
 import com.ilham1012.ecgbpi.POJO.EcgRecord;
+import com.ilham1012.ecgbpi.POJO.EcgRecordService;
 import com.ilham1012.ecgbpi.R;
-import com.ilham1012.ecgbpi.helper.BITalinoReading;
-import com.ilham1012.ecgbpi.helper.ReadingService;
 import com.ilham1012.ecgbpi.helper.SQLiteHandler;
 
 import java.io.InputStream;
@@ -34,7 +33,9 @@ import roboguice.inject.InjectView;
 public class RecordActivity extends RoboActivity {
 
     private static final String TAG = "MainActivity";
-    private static final boolean UPLOAD = false;
+    private static final String API_BASE_URL = "http://192.168.2.131:8888/test_api/api";
+    private static final boolean UPLOAD = true;
+    private final static int [] selChannels = {2};
     /*
      * http://developer.android.com/reference/android/bluetooth/BluetoothDevice.html
      * #createRfcommSocketToServiceRecord(java.util.UUID)
@@ -53,6 +54,8 @@ public class RecordActivity extends RoboActivity {
     private Button stopBtn;
     private EcgRecord ecgRecord;
     private SQLiteHandler db;
+    private TestAsyncTask testAsyncTask;
+    private Long tsLong;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,10 +64,13 @@ public class RecordActivity extends RoboActivity {
 
         ecgRecord = new EcgRecord();
 
-        Bundle extras = getIntent().getExtras();
-        ecgRecord.recording_name = extras.getString("recording_name");
+        ecgRecord.setUserId(1);
 
-        this.setTitle(ecgRecord.recording_name);
+        Bundle extras = getIntent().getExtras();
+        ecgRecord.setRecordingName(extras.getString("recording_name"));
+        ecgRecord.setFileUrl(ecgRecord.getRecordingName() + ".txt");
+
+        this.setTitle(ecgRecord.getRecordingName());
 
         db = new SQLiteHandler(getBaseContext());
 
@@ -100,22 +106,27 @@ public class RecordActivity extends RoboActivity {
     private void startRecording() {
 
         // execute
-//        if (!testInitiated){
-//            new TestAsyncTask().execute();
-//        }
+        if (!testInitiated){
+            testAsyncTask = new TestAsyncTask();
+            testAsyncTask.execute();
+        }
 
-        Long tsLong = System.currentTimeMillis()/1000;
-        ecgRecord.recording_time = tsLong.toString();
+        tsLong = System.currentTimeMillis()/1000;
+        ecgRecord.setRecordingTime(tsLong.toString());
 
         Toast.makeText(getApplicationContext(),
-                "Record start at " + ecgRecord.recording_time, Toast.LENGTH_LONG).show();
+                "Record start at " + ecgRecord.getRecordingTime(), Toast.LENGTH_LONG).show();
     }
 
     private void stopRecording() {
 
-        db.addEcgRecord(1, ecgRecord.recording_time, ecgRecord.recording_name, "test.txt");
+        testAsyncTask.stopTask();
+
+        db.addEcgRecord(ecgRecord.getUserId(), ecgRecord.getRecordingTime(), ecgRecord.getRecordingName(), ecgRecord.getFileUrl());
+        db.close();
+
         Toast.makeText(getApplicationContext(),
-                "Record " + ecgRecord.recording_name + " has been saved", Toast.LENGTH_LONG).show();
+                "Record " + ecgRecord.getRecordingName() + " has been saved", Toast.LENGTH_LONG).show();
 
         Intent intent = new Intent(RecordActivity.this, DashboardNewActivity.class);
         startActivity(intent);
@@ -148,6 +159,19 @@ public class RecordActivity extends RoboActivity {
                 final BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
                 dev = btAdapter.getRemoteDevice(remoteDevice);
 
+                if (UPLOAD) {
+                    // instantiate reading service client
+                    RestAdapter restAdapter2 = new RestAdapter.Builder()
+                            .setEndpoint(API_BASE_URL)
+                            .build();
+                    EcgRecordService service2 = restAdapter2.create(EcgRecordService.class);
+
+                    // upload reading
+                    Response response2 = service2.uploadReading(ecgRecord);
+                    Log.e(TAG, "Response2 : " + response2.getBody());
+                    assert response2.getStatus() == 200;
+                }
+
                 /*
                  * Establish Bluetooth connection
                  *
@@ -169,7 +193,8 @@ public class RecordActivity extends RoboActivity {
                 sock.connect();
                 testInitiated = true;
 
-                bitalino = new BITalinoDevice(1000, new int[]{0, 1, 2, 3, 4, 5});
+
+                bitalino = new BITalinoDevice(1000, selChannels); // new int[]{0, 1, 2, 3, 4, 5});
                 publishProgress("Connecting to BITalino [" + remoteDevice + "]..");
                 bitalino.open(sock.getInputStream(), sock.getOutputStream());
                 publishProgress("Connected.");
@@ -189,17 +214,28 @@ public class RecordActivity extends RoboActivity {
 
                     if (UPLOAD) {
                         // prepare reading for upload
-                        BITalinoReading reading = new BITalinoReading();
-                        reading.setTimestamp(System.currentTimeMillis());
-                        reading.setFrames(frames);
+//                        BITalinoReading reading = new BITalinoReading();
+//                        reading.setTimestamp(System.currentTimeMillis()/1000);
+//                        String channelEkg = "";
+//
+//                        for (BITalinoFrame frame : frames){
+//                            channelEkg = channelEkg + frame.getAnalog(selChannels[0]) + ", ";
+//                        }
+//
+//                        reading.setFrameString(channelEkg);
+
+//                        reading.setFrames(frames);
                         // instantiate reading service client
-                        RestAdapter restAdapter = new RestAdapter.Builder()
-                                .setEndpoint("http://server_ip:8080/bitalino")
-                                .build();
-                        ReadingService service = restAdapter.create(ReadingService.class);
-                        // upload reading
-                        Response response = service.uploadReading(reading);
-                        assert response.getStatus() == 200;
+//                        RestAdapter restAdapter = new RestAdapter.Builder()
+//                                .setEndpoint("http://192.168.2.131:8888/test_api/api/bitalino")
+//                                .build();
+//                        ReadingService service = restAdapter.create(ReadingService.class);
+//
+//
+//
+//                        // upload reading
+//                        Response response = service.uploadReading(reading);
+//                        assert response.getStatus() == 200;
                     }
 
                     // present data in screen
@@ -208,6 +244,8 @@ public class RecordActivity extends RoboActivity {
 
                     counter++;
                 }
+
+
 
                 // trigger digital outputs
                 // int[] digital = { 1, 1, 1, 1 };
@@ -226,6 +264,10 @@ public class RecordActivity extends RoboActivity {
 
         @Override
         protected void onCancelled() {
+            stopTask();
+        }
+
+        public void stopTask(){
             // stop acquisition and close bluetooth connection
             try {
                 bitalino.stop();

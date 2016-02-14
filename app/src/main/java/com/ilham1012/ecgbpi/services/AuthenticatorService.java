@@ -15,7 +15,7 @@ import com.ilham1012.ecgbpi.app.Authenticator;
  * when started.
  */
 public class AuthenticatorService extends Service {
-    ...
+
     // Instance field that stores the authenticator object
     private Authenticator mAuthenticator;
     @Override

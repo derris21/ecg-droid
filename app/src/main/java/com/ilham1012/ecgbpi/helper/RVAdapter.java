@@ -42,8 +42,8 @@ public class RVAdapter extends RecyclerView.Adapter<RVAdapter.CustomViewHolder> 
 
     @Override
     public void onBindViewHolder(CustomViewHolder holder, int i) {
-        holder.title.setText(records.get(i).recording_name);
-        holder.subtitle.setText(records.get(i).recording_time);
+        holder.title.setText(records.get(i).getRecordingName());
+        holder.subtitle.setText(records.get(i).getRecordingTime());
 
         holder.title.setOnClickListener(new View.OnClickListener() {
             @Override

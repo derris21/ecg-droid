@@ -226,11 +226,14 @@ public class DashboardNewActivity extends AppCompatActivity {
              * then call context.setIsSyncable(account, AUTHORITY, 1)
              * here.
              */
+
+            return newAccount;
         } else {
             /*
              * The account exists or some other error occurred. Log this, report it,
              * or handle it internally.
              */
+            return null;
         }
     }
 
