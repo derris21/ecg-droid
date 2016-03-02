@@ -19,8 +19,14 @@ import com.bitalino.comm.BITalinoFrame;
 import com.ilham1012.ecgbpi.POJO.EcgRecord;
 import com.ilham1012.ecgbpi.POJO.EcgRecordService;
 import com.ilham1012.ecgbpi.R;
+import com.ilham1012.ecgbpi.helper.BITalinoReading;
+import com.ilham1012.ecgbpi.helper.ReadingService;
 import com.ilham1012.ecgbpi.helper.SQLiteHandler;
 import com.ilham1012.ecgbpi.services.FileUploadService;
+import com.jjoe64.graphview.GraphView;
+import com.jjoe64.graphview.Viewport;
+import com.jjoe64.graphview.series.DataPoint;
+import com.jjoe64.graphview.series.LineGraphSeries;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -42,7 +48,10 @@ import roboguice.inject.InjectView;
 public class RecordActivity extends RoboActivity {
 
     private static final String TAG = "MainActivity";
-    private static final String API_BASE_URL = "http://192.168.2.131:8888/test_api/api";
+//    private static final String API_BASE_URL = "http://192.168.2.131:8888/test_api/api";  //@rumah
+//    private static final String API_BASE_URL = "http://192.168.31.18/ecgbpi/api";         //@desain-bpi
+//    private static final String API_BASE_URL = "http://192.168.1.34/ecgbpi/api";            //@kosan
+    private static final String API_BASE_URL = "http://ecgbpi.azurewebsites.net/api";
     private static final boolean UPLOAD = true;
     private final static int [] selChannels = {2};
     /*
@@ -68,6 +77,10 @@ public class RecordActivity extends RoboActivity {
     private Long tsLong;
     private String tempData = "";
 
+    private LineGraphSeries<DataPoint> series;
+    private int lastX = 0;
+    private GraphView graph;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -79,11 +92,13 @@ public class RecordActivity extends RoboActivity {
 
         Bundle extras = getIntent().getExtras();
         ecgRecord.setRecordingName(extras.getString("recording_name"));
-        ecgRecord.setFileUrl(ecgRecord.getRecordingName() + ".txt");
+        ecgRecord.setFileUrl(ecgRecord.getRecordingName() + ".json");
 
         this.setTitle(ecgRecord.getRecordingName());
 
         db = new SQLiteHandler(getBaseContext());
+
+        initGraph();
 
         startBtn = (Button) findViewById(R.id.btnStartRecord);
 //        stopBtn = (Button) findViewById(R.id.btnStopRecord);
@@ -118,6 +133,22 @@ public class RecordActivity extends RoboActivity {
 //            }
 //        });
 
+
+    }
+
+    private void initGraph(){
+        // we get graph view instance
+        GraphView graph = (GraphView) findViewById(R.id.graph);
+        // data
+        series = new LineGraphSeries<DataPoint>();
+        graph.addSeries(series);
+        // customize a little bit viewport
+        Viewport viewport = graph.getViewport();
+        viewport.setYAxisBoundsManual(true);
+        viewport.setMinY(0);
+        viewport.setMaxY(600);
+        viewport.setScalable(true);
+        viewport.setScrollable(true);
 
     }
 
@@ -156,6 +187,7 @@ public class RecordActivity extends RoboActivity {
         checkExternalMedia();
         writeToSDFile();
         uploadFile();
+        new PostRecordingTask().execute();
     }
 
     /** Method to check whether external media available and writable. This is adapted from
@@ -178,7 +210,7 @@ public class RecordActivity extends RoboActivity {
             mExternalStorageAvailable = mExternalStorageWriteable = false;
         }
         Log.i(TAG, "External Media: readable="
-                +mExternalStorageAvailable+" writable="+mExternalStorageWriteable);
+                + mExternalStorageAvailable + " writable=" + mExternalStorageWriteable);
     }
 
     /** Method to write ascii text characters to file on SD card. Note that you must add a
@@ -204,7 +236,7 @@ public class RecordActivity extends RoboActivity {
             PrintWriter pw = new PrintWriter(f);
             pw.print("[");
             pw.print(tempData);
-            pw.print("]");
+            pw.print("0 ]");
             pw.flush();
             pw.close();
             f.close();
@@ -215,31 +247,40 @@ public class RecordActivity extends RoboActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        Log.i(TAG, "File written to "+file);
+        Log.i(TAG, "File written to " + file);
     }
 
     private void uploadFile(){
+
         File root = android.os.Environment.getExternalStorageDirectory();
 
-        RestAdapter restAdapter2 = new RestAdapter.Builder()
-                                .setEndpoint(API_BASE_URL)
-                                .build();
-        FileUploadService fileUploadService = restAdapter2.create(FileUploadService.class);
-        TypedFile typedFile = new TypedFile("multipart/form-data", new File(root.getAbsolutePath() + "/ecgbpi/ecgrecord/" + ecgRecord.getFileUrl()));
-        String description = "hello, this is description speaking";
+        try {
+            RestAdapter restAdapter2 = new RestAdapter.Builder()
+                    .setEndpoint(API_BASE_URL)
+                    .build();
+            FileUploadService fileUploadService = restAdapter2.create(FileUploadService.class);
+            TypedFile typedFile = new TypedFile("multipart/form-data", new File(root.getAbsolutePath() + "/ecgbpi/ecgrecord/" + ecgRecord.getFileUrl()));
+            String description = "hello, this is description speaking";
 
-        fileUploadService.upload(typedFile, description, new Callback<String>() {
-            @Override
-            public void success(String s, Response response) {
-                Log.e("Upload", "success " + response.getStatus());
-            }
+            fileUploadService.upload(typedFile, description, new Callback<String>() {
+                @Override
+                public void success(String s, Response response) {
+                    Log.e("Upload", "success " + response.getStatus());
+                }
 
-            @Override
-            public void failure(RetrofitError error) {
-                Log.e("Upload", "error " + error.getMessage());
-            }
-        });
+                @Override
+                public void failure(RetrofitError error) {
+//                    String json =  new String(((TypedByteArray)error.getResponse().getBody()).getBytes());
+//                    Log.v("failure", json.toString());
+                    Log.e("Upload", "error " + error.getMessage());
+                }
+            });
+        }catch (RetrofitError error){
+            Log.e("Upload", "error.... " + error.getMessage());
+        }
     }
+
+
 
 
     @Override
@@ -249,7 +290,7 @@ public class RecordActivity extends RoboActivity {
         return true;
     }
 
-    private class TestAsyncTask extends AsyncTask<Void, String, Void> {
+    private class TestAsyncTask extends AsyncTask<Void, Integer, Void> {
         private TextView tvLog = (TextView) findViewById(R.id.log);
         private BluetoothDevice dev = null;
         private BluetoothSocket sock = null;
@@ -266,18 +307,6 @@ public class RecordActivity extends RoboActivity {
                 final BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
                 dev = btAdapter.getRemoteDevice(remoteDevice);
 
-                if (UPLOAD) {
-                    // instantiate reading service client
-                    RestAdapter restAdapter2 = new RestAdapter.Builder()
-                            .setEndpoint(API_BASE_URL)
-                            .build();
-                    EcgRecordService service2 = restAdapter2.create(EcgRecordService.class);
-
-                    // upload reading
-                    Response response2 = service2.uploadReading(ecgRecord);
-                    Log.e(TAG, "Response2 : " + response2.getBody());
-                    assert response2.getStatus() == 200;
-                }
 
                 /*
                  * Establish Bluetooth connection
@@ -302,12 +331,12 @@ public class RecordActivity extends RoboActivity {
 
 
                 bitalino = new BITalinoDevice(1000, selChannels); // new int[]{0, 1, 2, 3, 4, 5});
-                publishProgress("Connecting to BITalino [" + remoteDevice + "]..");
+//                publishProgress("Connecting to BITalino [" + remoteDevice + "]..");
                 bitalino.open(sock.getInputStream(), sock.getOutputStream());
-                publishProgress("Connected.");
+//                publishProgress("Connected.");
 
                 // get BITalino version
-                publishProgress("Version: " + bitalino.version());
+//                publishProgress("Version: " + bitalino.version());
 
                 // start acquisition on predefined analog channels
                 bitalino.start();
@@ -316,39 +345,17 @@ public class RecordActivity extends RoboActivity {
                 int counter = 0;
                 while (counter < 100) {
                     final int numberOfSamplesToRead = 1000;
-                    publishProgress("Reading " + numberOfSamplesToRead + " samples..");
+//                    publishProgress("Reading " + numberOfSamplesToRead + " samples..");
                     BITalinoFrame[] frames = bitalino.read(numberOfSamplesToRead);
 
-                    if (UPLOAD) {
-                        // prepare reading for upload
-//                        BITalinoReading reading = new BITalinoReading();
-//                        reading.setTimestamp(System.currentTimeMillis()/1000);
-//                        String channelEkg = "";
-//
-//                        for (BITalinoFrame frame : frames){
-//                            channelEkg = channelEkg + frame.getAnalog(selChannels[0]) + ", ";
-//                        }
-//
-//                        reading.setFrameString(channelEkg);
 
-//                        reading.setFrames(frames);
-                        // instantiate reading service client
-//                        RestAdapter restAdapter = new RestAdapter.Builder()
-//                                .setEndpoint("http://192.168.2.131:8888/test_api/api/bitalino")
-//                                .build();
-//                        ReadingService service = restAdapter.create(ReadingService.class);
-//
-//
-//
-//                        // upload reading
-//                        Response response = service.uploadReading(reading);
-//                        assert response.getStatus() == 200;
-                    }
 
                     // present data in screen
                     for (BITalinoFrame frame : frames) {
-                        publishProgress(frame.toString());
+//                        publishProgress(frame.toString());
                         tempData = tempData + frame.getAnalog(selChannels[0]) + ", ";
+                        publishProgress(frame.getAnalog(selChannels[0]));
+
                     }
 
                     counter++;
@@ -367,8 +374,10 @@ public class RecordActivity extends RoboActivity {
         }
 
         @Override
-        protected void onProgressUpdate(String... values) {
-            tvLog.append("\n".concat(values[0]));
+        protected void onProgressUpdate(Integer... values) {
+//            tvLog.append("\n".concat(values[0]));
+            series.appendData(new DataPoint(lastX++, values[0]), true, 1000);
+            Log.i("Graph", "Append " + lastX + ", " + values[0]);
         }
 
         @Override
@@ -391,9 +400,66 @@ public class RecordActivity extends RoboActivity {
             }
         }
 
+        private void realtimeUpload(BITalinoFrame[] frames){
+            if (UPLOAD) {
+                // prepare reading for upload
+                BITalinoReading reading = new BITalinoReading();
+                reading.setTimestamp(System.currentTimeMillis()/1000);
+                String channelEkg = "";
+
+                for (BITalinoFrame frame : frames){
+                    channelEkg = channelEkg + frame.getAnalog(selChannels[0]) + ", ";
+                }
+
+                reading.setFrameString(channelEkg);
+
+                reading.setFrames(frames);
+                // instantiate reading service client
+                RestAdapter restAdapter = new RestAdapter.Builder()
+                        .setEndpoint("http://192.168.2.131:8888/test_api/api/bitalino")
+                        .build();
+                ReadingService service = restAdapter.create(ReadingService.class);
 
 
 
+                // upload reading
+                Response response = service.uploadReading(reading);
+                assert response.getStatus() == 200;
+            }
+        }
+
+
+    }
+
+
+    private class PostRecordingTask extends AsyncTask<String, Void, Void> {
+
+
+        @Override
+        protected Void doInBackground(String... params) {
+            postRecording();
+            return null;
+        }
+
+        private void postRecording(){
+            if (UPLOAD) {
+                try {
+                    System.setProperty("http.keepAlive", "false");
+                    // instantiate reading service client
+                    RestAdapter restAdapter2 = new RestAdapter.Builder()
+                            .setEndpoint(API_BASE_URL)
+                            .build();
+                    EcgRecordService service2 = restAdapter2.create(EcgRecordService.class);
+
+                    // upload reading
+                    Response response2 = service2.uploadReading(ecgRecord);
+                    Log.e(TAG, "Response2 : " + response2.getStatus());
+                    assert response2.getStatus() == 200;
+                }catch(RetrofitError error){
+                    Log.e(TAG, "POST recording error : " + error.getMessage());
+                }
+            }
+        }
     }
 
 }

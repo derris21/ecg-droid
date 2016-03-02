@@ -80,8 +80,13 @@ public class DashboardNewActivity extends AppCompatActivity {
             logoutUser();
         }
 
-        displayListView();
 
+    }
+
+    @Override
+    protected void onResume(){
+        super.onResume();
+        displayListView();
     }
 
 
@@ -100,7 +105,7 @@ public class DashboardNewActivity extends AppCompatActivity {
                 Intent i = new Intent(DashboardNewActivity.this, RecordActivity.class);
                 i.putExtra("recording_name", edt.getText().toString());
                 startActivity(i);
-                finish();
+//                finish();
             }
         });
         dialogBuilder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
