@@ -1,4 +1,4 @@
-package com.ilham1012.ecgbpi.helper;
+package com.ilham1012.ecgbpi.POJO;
 
 /**
  * Created by Lab Desain 2 on 11/02/2016.

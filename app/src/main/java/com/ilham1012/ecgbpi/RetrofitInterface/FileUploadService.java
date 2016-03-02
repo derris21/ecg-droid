@@ -1,4 +1,4 @@
-package com.ilham1012.ecgbpi.services;
+package com.ilham1012.ecgbpi.RetrofitInterface;
 
 import retrofit.Callback;
 import retrofit.http.Multipart;

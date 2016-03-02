@@ -3,9 +3,9 @@
     package="com.ilham1012.ecgbpi">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.READ_SYNC_SETTINGS"/>
-    <uses-permission android:name="android.permission.WRITE_SYNC_SETTINGS"/>
-    <uses-permission android:name="android.permission.AUTHENTICATE_ACCOUNTS"/>
+    <uses-permission android:name="android.permission.READ_SYNC_SETTINGS" />
+    <uses-permission android:name="android.permission.WRITE_SYNC_SETTINGS" />
+    <uses-permission android:name="android.permission.AUTHENTICATE_ACCOUNTS" />
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
@@ -22,11 +22,9 @@
             android:name=".helper.DataContentProvider"
             android:authorities="com.ilham1012.ecgbpi.provider"
             android:exported="false"
-            android:syncable="true"/>
+            android:syncable="true" />
 
-        <activity android:name=".activity.DashboardActivity">
-
-        </activity>
+        <activity android:name=".activity.DashboardActivity"></activity>
         <activity android:name=".activity.LoginActivity" />
         <activity android:name=".activity.RegisterActivity" />
         <activity android:name=".activity.RecordActivity" />
@@ -41,16 +39,20 @@
             </intent-filter>
         </activity>
 
-        <service
-            android:name=".services.AuthenticatorService">
+        <service android:name=".services.AuthenticatorService">
             <intent-filter>
-                <action android:name="android.accounts.AccountAuthenticator"/>
+                <action android:name="android.accounts.AccountAuthenticator" />
             </intent-filter>
+
             <meta-data
                 android:name="android.accounts.AccountAuthenticator"
                 android:resource="@xml/authenticator" />
         </service>
 
+        <activity
+            android:name=".activity.RecordNewActivity"
+            android:label="@string/title_activity_record_new"
+            android:theme="@style/AppTheme"></activity>
     </application>
 
 </manifest>

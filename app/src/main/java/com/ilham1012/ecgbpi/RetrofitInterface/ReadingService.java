@@ -1,4 +1,4 @@
-package com.ilham1012.ecgbpi.helper;
+package com.ilham1012.ecgbpi.RetrofitInterface;
 
 /**
  * Created by Lab Desain 2 on 11/02/2016.
@@ -16,6 +16,8 @@ package com.ilham1012.ecgbpi.helper;
  * the License.
  */
 
+
+import com.ilham1012.ecgbpi.POJO.BITalinoReading;
 
 import retrofit.client.Response;
 import retrofit.http.Body;
