@@ -50,4 +50,6 @@
     <color name="bg_main">@color/skyBlue</color>
     <color name="white">@color/pureWhite</color>
 
+    <color name="error_dialog">@color/colorPrimaryDark</color>
+
 </resources>

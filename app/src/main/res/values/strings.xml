@@ -19,6 +19,7 @@
     <string name="waiting">Waiting...</string>
 
 
+    <string name="menu_connect">Connect</string>
     <string name="menu_setting">Settings</string>
     <string name="menu_logout">Logout</string>
     <string name="title_activity_dashboard">DashboardActivity</string>

@@ -1,328 +1,199 @@
 package com.ilham1012.ecgbpi.activity;
 
-import android.annotation.SuppressLint;
-import android.app.ActivityManager;
-import android.app.ActivityManager.RunningServiceInfo;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.ServiceConnection;
-import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.IBinder;
-import android.os.Message;
-import android.os.Messenger;
-import android.os.RemoteException;
 import android.os.SystemClock;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.MenuInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.Chronometer;
-import android.widget.PopupMenu;
+import android.widget.ListView;
+import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.ilham1012.ecgbpi.POJO.EcgRecord;
 import com.ilham1012.ecgbpi.R;
-import com.ilham1012.ecgbpi.model.DataManager;
+import com.ilham1012.ecgbpi.helper.SQLiteHandler;
+import com.ilham1012.ecgbpi.helper.SessionManager;
 import com.ilham1012.ecgbpi.model.DeviceConfiguration;
-import com.ilham1012.ecgbpi.services.BiopluxService;
-
-import java.sql.SQLException;
-import java.text.DateFormat;
-import java.util.Date;
+import com.jjoe64.graphview.GraphView;
+import com.jjoe64.graphview.Viewport;
+import com.jjoe64.graphview.series.DataPoint;
+import com.jjoe64.graphview.series.LineGraphSeries;
 
 public class RecordNewActivity extends AppCompatActivity {
-    // EcgRecord POJO
-    private EcgRecord ecgRecord;
-
-    private static final String TAG = RecordNewActivity.class.getName();
-
-    // Keys used for communication with activity
     public static final String KEY_DURATION = "duration";
-    public static final String KEY_RECORDING_NAME = "recordingName";
-    public static final String KEY_CONFIGURATION = "configSelected";
+    public static final String KEY_RECORDING_NAME = "duration";
+    public static final String KEY_CONFIGURATION = "duration";
 
-    // key for recovery. Used when android kills activity
-    public static final String KEY_CHRONOMETER_BASE = "chronometerBase";
+    private SQLiteHandler db;
+    private SessionManager session;
+    private ListView listView;
+    private SimpleCursorAdapter dataAdapter;
 
-    // 10 seconds
-    private  final int maxDataCount = 10000;
+    private LineGraphSeries<DataPoint> series;
+    private int lastX = 0;
+    private GraphView graph;
 
-    // Android's widgets
+    private boolean menuConnected = false;
 
-    private Chronometer chronometer;
-
-    // DIALOGS
-    private AlertDialog connectionErrorDialog;
-    private ProgressDialog savingDialog;
+    private DeviceConfiguration recordingConfiguration;
 
     // AUX VARIABLES
     private Context classContext = this;
     private Bundle extras;
     private LayoutInflater inflater;
 
-    private DeviceConfiguration recordingConfiguration;
-//    private DeviceRecording recording;
 
-//    private Graph[] graphs;
-    private int[] displayChannelPosition;
-    private int currentZoomValue = 0;
-    private String duration = null;
-    private SharedPreferences sharedPref = null;
-
-    private boolean isServiceBounded = false;
-    private boolean recordingOverride = false;
-    private boolean savingDialogMessageChanged = false;
-    private boolean closeRecordingActivity = false;
-    private boolean drawState = true; //true -> Enable | false -> Disable
-    private boolean goToEnd = true;
-
-    // ERROR VARIABLES
-    private int bpErrorCode   = 0;
-    private boolean serviceError = false;
-    private boolean connectionError = false;
-
-    // MESSENGERS USED TO COMMUNICATE ACTIVITY AND SERVICE
-    private Messenger serviceMessenger = null;
-    private final Messenger activityMessenger = new Messenger(new IncomingHandler());
+    private Chronometer chronometer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_record_new);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
 
-        ecgRecord = new EcgRecord();
-        // temp user_id
-        ecgRecord.setUserId(1);
+        listView = (ListView) findViewById(R.id.ecgRecordListView);
+        initGraph();
 
-        Bundle extras = getIntent().getExtras();
-        ecgRecord.setRecordingName(extras.getString("recording_name"));
-        ecgRecord.setFileUrl(ecgRecord.getRecordingName() + ".json");
-    }
+        // Sqlite db handler
+        db = new SQLiteHandler(getApplicationContext());
+//         initializeData();
 
-    @SuppressLint("HandlerLeak")
-    class IncomingHandler extends Handler {
-        @Override
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
-                case BiopluxService.MSG_DATA: {
-                    appendDataToGraphs(
-                            msg.getData().getDouble(BiopluxService.KEY_X_VALUE),
-                            msg.getData().getShortArray(BiopluxService.KEY_FRAME_DATA));
-                    break;
-                }
-                case BiopluxService.MSG_CONNECTION_ERROR: {
-                    serviceError = true;
-                    savingDialog.dismiss();
-                    displayConnectionErrorDialog(msg.arg1);
-                    break;
-                }
-                case DataManager.MSG_PERCENTAGE: {
-                    if (!savingDialogMessageChanged && msg.arg2 == DataManager.STATE_COMPRESSING_FILE) {
-                        savingDialog.setMessage(getString(R.string.nr_saving_dialog_compressing_message));
-                        savingDialogMessageChanged = true;
-                    }
-                    savingDialog.setProgress(msg.arg1);
+        // Session manager
+        session = new SessionManager(getApplicationContext());
 
-                    break;
-                }
-                case BiopluxService.MSG_SAVED: {
-                    savingDialog.dismiss();
-                    saveRecordingOnInternalDB();
-                    if (closeRecordingActivity) {
-                        closeRecordingActivity = false;
-                        finish();
-//                        overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
-                    }
-                    displayInfoToast(getString(R.string.nr_info_rec_saved));
-                    break;
-                }
-                default: {
-                    super.handleMessage(msg);
-                }
-            }
+        if (!session.isLoggedIn()){
+            logoutUser();
         }
     }
 
-    /**
-     * Bind connection used to bind and unbind with service
-     * onServiceConnected() called when the connection with the service has been established,
-     * giving us the object we can use to interact with the service. We are
-     * communicating with the service using a Messenger, so here we get a
-     * client-side representation of that from the raw IBinder object.
-     */
-    private ServiceConnection bindConnection = new ServiceConnection() {
-        public void onServiceConnected(ComponentName className, IBinder service) {
-            serviceMessenger = new Messenger(service);
-            isServiceBounded = true;
-            Message msg = Message.obtain(null, BiopluxService.MSG_REGISTER_CLIENT);
-            msg.replyTo = activityMessenger;
-            try {
-                serviceMessenger.send(msg);
-            } catch (RemoteException e) {
-                Log.e(TAG, "service conection failed", e);
-                displayConnectionErrorDialog(10); // 10 -> fatal error
+    private boolean connect(){
+
+        BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        final ProgressDialog progress;
+        if(recordingConfiguration.getMacAddress().compareTo("test")!= 0){ // 'test' is used to launch device emulator
+            if (mBluetoothAdapter == null) {
+                displayInfoToast(getString(R.string.nr_bluetooth_not_supported));
+                return false;
+            }
+            if (!mBluetoothAdapter.isEnabled()){
+                showBluetoothDialog();
+                return false;
             }
         }
 
-        /**
-         *  This is called when the connection with the service has been
-         *  unexpectedly disconnected -- that is, its process crashed.
-         */
-        public void onServiceDisconnected(ComponentName className) {
-            serviceMessenger = null;
-            isServiceBounded = false;
-            Log.i(TAG, "service disconnected");
-        }
-    };
+        progress = ProgressDialog.show(this,getResources().getString(R.string.nr_progress_dialog_title),getResources().getString(R.string.nr_progress_dialog_message), true);
 
-
-    /**
-     * Appends x and y values received from service to all active graphs. The
-     * graph always moves to the last value added
-     */
-    void appendDataToGraphs(double xValue, short[] data) {
-        if(!serviceError){
-            for (int i = 0; i < graphs.length; i++) {
-                graphs[i].getSerie().appendData(
-                        new GraphViewData(xValue,
-                                data[displayChannelPosition[i]]), goToEnd, maxDataCount);
-            }
-        }
-    }
-
-
-    /**
-     * Sends recording duration to the service by message when recording is
-     * stopped
-     */
-    private void sendRecordingDuration() {
-        if (isServiceBounded && serviceMessenger != null) {
-            Message msg = Message.obtain(null, BiopluxService.MSG_RECORDING_DURATION, 0, 0);
-            Bundle extras = new Bundle();
-            extras.putString(KEY_DURATION, duration);
-            msg.setData(extras);
-            msg.replyTo = activityMessenger;
-            try {
-                serviceMessenger.send(msg);
-            } catch (RemoteException e) {
-                Log.e(TAG, "Error sending duration to service", e);
-                displayConnectionErrorDialog(10); // 10 -> fatal error
-            }
-        }else{Log.e(TAG, "Error sending duration to service");}
-    }
-
-    private void initActivityContentLayout() {
-
-        LayoutParams graphParams, detailParameters;
-        View graphsView = findViewById(R.id.nr_graphs);
-
-        // Initializes layout parameters
-        graphParams = new LayoutParams(LayoutParams.MATCH_PARENT,
-                Integer.parseInt((getResources()
-                        .getString(R.string.graph_height))));
-        detailParameters = new LayoutParams(LayoutParams.MATCH_PARENT,
-                LayoutParams.WRAP_CONTENT);
-
-
-        for (int i = 0; i < recordingConfiguration
-                .getDisplayChannelsNumber(); i++) {
-            graphs[i] = new Graph(this,
-                    getString(R.string.nc_dialog_channel)
-                            + " "
-                            + recordingConfiguration.getDisplayChannels()
-                            .get(i).toString());
-            LinearLayout graph = (LinearLayout) inflater.inflate(
-                    R.layout.in_ly_graph, null);
-            graphs[i].getGraphView().setOnTouchListener(graphTouchListener);
-            ((ViewGroup) graph).addView(graphs[i].getGraphView());
-            ((ViewGroup) graphsView).addView(graph, graphParams);
-        }
-
-
-        // If just one channel is being displayed, show configuration details
-        if (recordingConfiguration.getDisplayChannelsNumber() == 1) {
-            View details = inflater.inflate(R.layout.in_ly_graph_details, null);
-            ((ViewGroup) graphsView).addView(details, detailParameters);
-
-            // get views
-            uiConfigurationName = (TextView) findViewById(R.id.nr_txt_configName);
-            uiNumberOfBits = (TextView) findViewById(R.id.nr_txt_config_nbits);
-            uiReceptionFrequency = (TextView) findViewById(R.id.nr_reception_freq);
-            uiSamplingFrequency = (TextView) findViewById(R.id.nr_sampling_freq);
-            uiActiveChannels = (TextView) findViewById(R.id.nr_txt_channels_active);
-            uiMacAddress = (TextView) findViewById(R.id.nr_txt_mac);
-
-            // fill them
-            uiConfigurationName.setText(recordingConfiguration.getName());
-            uiReceptionFrequency.setText(String.valueOf(recordingConfiguration
-                    .getVisualizationFrequency()) + " Hz");
-            uiSamplingFrequency.setText(String.valueOf(recordingConfiguration
-                    .getSamplingFrequency()) + " Hz");
-            uiNumberOfBits.setText(String.valueOf(recordingConfiguration
-                    .getNumberOfBits()) + " bits");
-            uiMacAddress.setText(recordingConfiguration.getMacAddress());
-            uiActiveChannels.setText(recordingConfiguration.getActiveChannels()
-                    .toString());
-        }
-    }
-
-    /**
-     * called when the back button is pressed and the recording is still
-     * running. On positive click, Stops and saves the recording, finishes
-     * activity so that parent gets focus
-     */
-    private void showBackDialog() {
-        // Sets a custom title view
-        TextView customTitleView = (TextView) inflater.inflate(R.layout.dialog_custom_title, null);
-        customTitleView.setText(R.string.nr_back_dialog_title);
-        customTitleView.setBackgroundColor(getResources().getColor(R.color.waring_dialog));
-
-        // dialog builder
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setCustomTitle(customTitleView)
-                .setView(inflater.inflate(R.layout.dialog_newrecording_backbutton_content, null))
-                .setPositiveButton(
-                        getString(R.string.nr_back_dialog_positive_button),
-                        new DialogInterface.OnClickListener() {
-                            // stops, saves and finishes recording
-                            public void onClick(DialogInterface dialog, int id) {
-                                stopRecording();
-                                closeRecordingActivity = true;
-                                // dialog gets closed
+        Thread connectionThread =
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        runOnUiThread(new Runnable(){
+                            public void run(){
+                                progress.dismiss();
+//                                if(connectionError){
+//                                    displayConnectionErrorDialog(bpErrorCode);
+//                                }else{
+//                                    Intent intent = new Intent(classContext, BiopluxService.class);
+//                                    intent.putExtra(KEY_RECORDING_NAME, recording.getName());
+//                                    intent.putExtra(KEY_CONFIGURATION, recordingConfiguration);
+//                                    startService(intent);
+//                                    bindToService();
+                                    startChronometer();
+//                                    uiMainbutton.setText(getString(R.string.nr_button_stop));
+                                    displayInfoToast(getString(R.string.nr_info_started));
+//                                    drawState = false;
+//                                }
                             }
                         });
-        builder.setNegativeButton(
-                getString(R.string.nc_dialog_negative_button),
-                new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        // dialog gets closed
                     }
                 });
 
-        AlertDialog backDialog = builder.create();
-        backDialog.show();
+//        if(recordingConfiguration.getMacAddress().compareTo("test")==0 && !isServiceRunning() && !recordingOverride)
+//            connectionThread.start();
+//        else if(mBluetoothAdapter.isEnabled() && !isServiceRunning() && !recordingOverride) {
+            connectionThread.start();
+//        }
+        return false;
 
     }
 
-    /**
-     * Creates and shows a bluetooth error dialog if mac address is other than
-     * 'test' and the bluetooth adapter is turned off. On positive click it
-     * sends the user to android' settings for the user to turn bluetooth on
-     * easily
-     */
+    private void disconnect(){
+        displayInfoToast("Disconnect");
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+    @Override
+    protected void onResume(){
+        super.onResume();
+        displayListView();
+    }
+
+    private void displayListView(){
+        Cursor cursor = db.fetchAllEcgRecords();
+
+        String columns[] = new String[]{
+                "recording_name",
+                "recording_time"
+        };
+
+        int[] toList = new int[]{
+                R.id.list_item_title,
+                R.id.list_item_subtitle
+        };
+
+        // create the adapter using the cursor pointing to the desired data
+        //as well as the layout information
+        dataAdapter = new SimpleCursorAdapter(
+                this, R.layout.list_item,
+                cursor,
+                columns,
+                toList,
+                0);
+
+        // Assign adapter to ListView
+        listView.setAdapter(dataAdapter);
+
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> listView, View view,
+                                    int position, long id) {
+                // Get the cursor, positioned to the corresponding row in the result set
+                Cursor cursor = (Cursor) listView.getItemAtPosition(position);
+
+                // Get the state's capital from this row in the database.
+                String clickedName =
+                        cursor.getString(cursor.getColumnIndexOrThrow("recording_name"));
+                displayInfoToast(clickedName);
+
+            }
+        });
+    }
+
+
     private void showBluetoothDialog() {
         // Initializes custom title
         TextView customTitleView = (TextView) inflater.inflate(R.layout.dialog_custom_title, null);
@@ -353,221 +224,82 @@ public class RecordNewActivity extends AppCompatActivity {
         (builder.create()).show();
     }
 
-    /**
-     * Sets up a connection error dialog with custom title. This is used to add
-     * custom message '.setMessage()' and display different possible connection
-     * errors it '.show()'
-     *
-     */
-    private void setupConnectionErrorDialog() {
 
-        // Initializes custom title
-        TextView customTitleView = (TextView) inflater.inflate(R.layout.dialog_custom_title, null);
-        customTitleView.setText(R.string.nr_bluetooth_dialog_title);
-        customTitleView.setBackgroundColor(getResources().getColor(R.color.error_dialog));
 
-        // builder
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setCustomTitle(customTitleView)
-                .setPositiveButton(
-                        getString(R.string.bp_positive_button),
-                        new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int id) {
-                                savingDialog.dismiss();
-                                closeRecordingActivity = true;
 
-                            }
-                        });
-        connectionErrorDialog = builder.create();
-        connectionErrorDialog.setCancelable(false);
-        connectionErrorDialog.setCanceledOnTouchOutside(false);
+
+    private void initGraph(){
+        // we get graph view instance
+        graph = (GraphView) findViewById(R.id.graph);
+        // data
+        series = new LineGraphSeries<DataPoint>();
+        graph.addSeries(series);
+        // customize a little bit viewport
+        Viewport viewport = graph.getViewport();
+        viewport.setYAxisBoundsManual(true);
+        viewport.setMinY(0);
+        viewport.setMaxY(600);
+        viewport.setScalable(true);
+        viewport.setScrollable(true);
 
     }
 
     /**
-     * Called when 'start recording' button is twice pressed On positive click,
-     * the current recording is removed and graph variables and views are reset.
-     * The overwrite recording starts right away
-     *
+     * Initialize records
+     * FOR SAMPLE DATA ONLY
      */
-    private void showOverwriteDialog() {
-
-        // initializes custom title view
-        TextView customTitleView = (TextView) inflater.inflate(R.layout.dialog_custom_title, null);
-        customTitleView.setText(R.string.nr_overwrite_dialog_title);
-        customTitleView.setBackgroundColor(getResources().getColor(R.color.waring_dialog));
-
-        // dialog' builder
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setCustomTitle(customTitleView)
-                .setMessage(R.string.nr_overwrite_dialog_message)
-                .setPositiveButton(
-                        getString(R.string.nr_overwrite_dialog_positive_button),
-                        new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int id) {
-                                // deletes current recording from Android's internal Database
-//                                try {
-////                                    Dao<DeviceRecording, Integer> dao = getHelper().getRecordingDao();
-////                                    dao.delete(recording);
-//                                } catch (SQLException e) {
-//                                    Log.e(TAG, "saving recording exception", e);
-//                                }
-
-                                // Reset activity variables
-                                recordingOverride = false;
-                                serviceError = false;
-                                closeRecordingActivity = false;
-                                savingDialogMessageChanged = false;
-                                goToEnd = true;
-
-                                // Reset activity content
-                                View graphsView = findViewById(R.id.nr_graphs);
-                                ((ViewGroup) graphsView).removeAllViews();
-                                initActivityContentLayout();
-                                savingDialog.setMessage(getString(R.string.nr_saving_dialog_adding_header_message));
-                                savingDialog.setProgress(0);
-
-                                startRecording();
-                            }
-                        });
-        builder.setNegativeButton(
-                getString(R.string.nc_dialog_negative_button),
-                new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        // dialog gets closed
-                    }
-                });
-
-        (builder.create()).show();
+    private void initializeData() {
+        db.deleteEcgRecordTable();
+        db.initializeSampleData();
     }
 
     /**
-     * If recording is running, shows save and quit confirmation dialog. If
-     * service is stopped. destroys activity
+     * Logging out the user. Will set isLoggedIn flag to false in shared preferences
+     * Clears the user data from sqlite users table
      */
+    private void logoutUser() {
+        session.setLogin(false);
+
+        db.deleteUserTable();
+
+        // Launching the login activity
+        Intent intent = new Intent(RecordNewActivity.this, LoginActivity.class);
+        startActivity(intent);
+        finish();
+    }
+
+
     @Override
-    public void onBackPressed() {
-        if (isServiceRunning())
-            showBackDialog();
-        else {
-            super.onBackPressed();
-//            overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
-        }
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return true;
     }
 
-    /**
-     * Stops and saves the recording in database and data as zip file
-     */
-    private void stopRecording(){
-        savingDialog.show();
-        stopChronometer();
-        sendRecordingDuration();
-        unbindFromService();
-        stopService(new Intent(RecordNewActivity.this, BiopluxService.class));
-        uiMainbutton.setText(getString(R.string.nr_button_start));
-        drawState = true;
-    }
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle item selection
+        switch (item.getItemId()) {
+            case R.id.connect:
 
-    /**
-     * Starts the recording if mac address is 'test' and recording is not
-     * running OR if bluetooth is supported by the device, bluetooth is enabled,
-     * mac is other than 'test' and recording is not running. Returns always
-     * false for the main thread to be stopped and thus be available for the
-     * progress dialog  spinning circle when we test the connection
-     */
-    private boolean startRecording() {
-        BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        final ProgressDialog progress;
-        if(recordingConfiguration.getMacAddress().compareTo("test")!= 0){ // 'test' is used to launch device emulator
-            if (mBluetoothAdapter == null) {
-                displayInfoToast(getString(R.string.nr_bluetooth_not_supported));
-                return false;
-            }
-            if (!mBluetoothAdapter.isEnabled()){
-                showBluetoothDialog();
-                return false;
-            }
-        }
-
-        progress = ProgressDialog.show(this,getResources().getString(R.string.nr_progress_dialog_title),getResources().getString(R.string.nr_progress_dialog_message), true);
-        Thread connectionThread =
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-
-                        //Revisar		BitalinoAndroidDevice connectionTest = new BitalinoAndroidDevice(recordingConfiguration.getMacAddress());
-                        //Revisar
-                        //Revisar					connectionTest.Close();
-
-
-                        runOnUiThread(new Runnable(){
-                            public void run(){
-                                progress.dismiss();
-                                if(connectionError){
-                                    displayConnectionErrorDialog(bpErrorCode);
-                                }else{
-                                    Intent intent = new Intent(classContext, BiopluxService.class);
-                                    intent.putExtra(KEY_RECORDING_NAME, recording.getName());
-                                    intent.putExtra(KEY_CONFIGURATION, recordingConfiguration);
-                                    startService(intent);
-                                    bindToService();
-                                    startChronometer();
-                                    uiMainbutton.setText(getString(R.string.nr_button_stop));
-                                    displayInfoToast(getString(R.string.nr_info_started));
-                                    drawState = false;
-                                }
-                            }
-                        });
-                    }
-                });
-
-        if(recordingConfiguration.getMacAddress().compareTo("test")==0 && !isServiceRunning() && !recordingOverride)
-            connectionThread.start();
-        else if(mBluetoothAdapter.isEnabled() && !isServiceRunning() && !recordingOverride) {
-            connectionThread.start();
-        }
-        return false;
-    }
-
-    /**
-     * Displays an error dialog with corresponding message based on the
-     * errorCode it receives. If code is unknown it displays FATAL ERROR message
-     */
-    private void displayConnectionErrorDialog(int errorCode) {
-        // Initializes custom title
-        TextView customTitleView = (TextView) inflater.inflate(R.layout.dialog_custom_title, null);
-        customTitleView.setBackgroundColor(getResources().getColor(R.color.colorPrimaryDark));
-        switch(errorCode){
-            case 1:
-                connectionErrorDialog.setMessage(getResources().getString(R.string.bp_address_incorrect));
-                break;
-            case 2:
-                connectionErrorDialog.setMessage(getResources().getString(R.string.bp_adapter_not_found));
-                break;
-            case 3:
-                connectionErrorDialog.setMessage(getResources().getString(R.string.bp_device_not_found));
-                break;
-            case 4:
-                connectionErrorDialog.setMessage(getResources().getString(R.string.bp_contacting_device));
-                break;
-            case 5:
-                connectionErrorDialog.setMessage(getResources().getString(R.string.bp_port_could_not_be_opened));
-                break;
-            case 6:
-                customTitleView.setText(R.string.nr_storage_error_dialog_title);
-                connectionErrorDialog.setCustomTitle(customTitleView);
-                connectionErrorDialog.setMessage(getResources().getString(R.string.bp_error_writing_a_frame));
-                break;
-            case 7:
-                customTitleView.setText(R.string.nr_storage_error_dialog_title);
-                connectionErrorDialog.setCustomTitle(customTitleView);
-                connectionErrorDialog.setMessage(getResources().getString(R.string.bp_error_saving_recording));
-                break;
+                if(menuConnected){
+                    item.setTitle("Connect");
+                    menuConnected = false;
+                    connect();
+                }else{
+                    item.setTitle("Disconnect");
+                    menuConnected = true;
+                    disconnect();
+                }
+                return true;
+            case R.id.settings:
+//                gotoSetting();
+                return true;
+            case R.id.logout:
+                logoutUser();
+                return true;
             default:
-                connectionErrorDialog.setMessage("FATAL ERROR");
-                break;
+                return super.onOptionsItemSelected(item);
         }
-        connectionErrorDialog.show();
     }
 
     /**
@@ -575,11 +307,8 @@ public class RecordNewActivity extends AppCompatActivity {
      * parameter
      */
     private void displayInfoToast(String messageToDisplay) {
-        Toast infoToast = new Toast(classContext);
-        View toastView = inflater.inflate(R.layout.toast_info, null);
-        infoToast.setView(toastView);
-        ((TextView) toastView.findViewById(R.id.display_text)).setText(messageToDisplay);
-        infoToast.show();
+        Toast.makeText(getApplicationContext(),
+                messageToDisplay, Toast.LENGTH_SHORT).show();
     }
 
     /**
@@ -595,185 +324,13 @@ public class RecordNewActivity extends AppCompatActivity {
      */
     private void stopChronometer() {
         chronometer.stop();
-        long elapsedMiliseconds = SystemClock.elapsedRealtime()
-                - chronometer.getBase();
-        duration = String.format("%02d:%02d:%02d",
-                (int) ((elapsedMiliseconds / (1000 * 60 * 60)) % 24), 	// hours
-                (int) ((elapsedMiliseconds / (1000 * 60)) % 60),	  	// minutes
-                (int) (elapsedMiliseconds / 1000) % 60);				// seconds
+//        long elapsedMiliseconds = SystemClock.elapsedRealtime()
+//                - chronometer.getBase();
+//        duration = String.format("%02d:%02d:%02d",
+//                (int) ((elapsedMiliseconds / (1000 * 60 * 60)) % 24), 	// hours
+//                (int) ((elapsedMiliseconds / (1000 * 60)) % 60),	  	// minutes
+//                (int) (elapsedMiliseconds / 1000) % 60);				// seconds
     }
 
-    /**
-     * Saves the recording on Android's internal Database with ORMLite
-     */
-    public void saveRecordingOnInternalDB() {
-//        DateFormat dateFormat = DateFormat.getDateTimeInstance();
-//        Date date = new Date();
-//
-//        recording.setConfiguration(recordingConfiguration);
-//        recording.setSavedDate(dateFormat.format(date));
-//        recording.setDuration(duration);
-//        try {
-//            Dao<DeviceRecording, Integer> dao = getHelper().getRecordingDao();
-//            dao.create(recording);
-//        } catch (SQLException e) {
-//            Log.e(TAG, "saving recording exception", e);
-//            displayConnectionErrorDialog(10); // 10 -> fatal error
-//        }
-    }
-
-    /**
-     * Gets all the processes that are running on the OS and checks whether the
-     * bioplux service is running. Returns true if it is running and false
-     * otherwise
-     */
-    private boolean isServiceRunning() {
-        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-        for (RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-            if (BiopluxService.class.getName().equals(service.service.getClassName()) && service.restarting == 0) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Attaches connection with the service and passes the recording name and
-     * the correspondent configuration to it on its intent
-     */
-    void bindToService() {
-        Intent intent = new Intent(classContext, BiopluxService.class);
-        bindService(intent, bindConnection, 0);
-    }
-
-    /**
-     * Detach our existing connection with the service
-     */
-    void unbindFromService() {
-        if (isServiceBounded) {
-            unbindService(bindConnection);
-            isServiceBounded = false;
-        }
-    }
-
-    /**
-     * Main button of activity. Starts, overwrites and stops recording depending
-     * of whether the recording was never started, was started or was started
-     * and stopped
-     */
-    public void onMainButtonClicked(View view) {
-        // Starts recording
-        if (!isServiceRunning() && !recordingOverride) {
-            startRecording();
-            // Overwrites recording
-        } else if (!isServiceRunning() && recordingOverride) {
-            showOverwriteDialog();
-            // Stops recording
-        } else if (isServiceRunning()) {
-            recordingOverride = true;
-            stopRecording();
-        }
-    }
-
-    /************************  EVENTS **********************/
-
-//    public void onClikedMenuItems(View v) {
-//        PopupMenu popup = new PopupMenu(this, v);
-//        popup.setOnMenuItemClickListener(this);
-//        MenuInflater inflater = popup.getMenuInflater();
-//        inflater.inflate(R.menu.new_recording_menu, popup.getMenu());
-//        popup.show();
-//    }
-
-//    @Override
-//    public boolean onMenuItemClick(MenuItem item) {
-//        // Handle item selection
-//        switch (item.getItemId()) {
-//            case R.id.nr_settings:
-//                Intent recordingSettingsIntent = new Intent(this, SettingsActivity.class);
-//                recordingSettingsIntent.putExtra(Constants.KEY_SETTINGS_TYPE, 2);
-//                recordingSettingsIntent.putExtra(Constants.KEY_SETTINGS_DRAW_STATE, drawState);
-//                startActivity(recordingSettingsIntent);
-//                return true;
-//            case R.id.nr_restore_zoom:
-//                long startValue = 0;
-//                for (int i = 0; i < graphs.length; i++){
-//                    if(graphs[i].getxValue() - Long.valueOf(getResources().getString(
-//                            R.string.graph_viewport_size)) < Long.valueOf(getResources().getString(
-//                            R.string.graph_viewport_size)))
-//                        startValue = graphs[i].getxValue();
-//                    else
-//                        startValue = graphs[i].getxValue() - Long.valueOf(getResources().getString(
-//                                R.string.graph_viewport_size));
-//
-//                    graphs[i].getGraphView().setViewPort(startValue, Long.valueOf(getResources().getString(
-//                            R.string.graph_viewport_size)));
-//                    graphs[i].getGraphView().redrawAll();
-//                }
-//
-//                return true;
-//            default:
-//                return super.onOptionsItemSelected(item);
-//        }
-//    }
-
-//    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,
-//                                          String key) {
-//        if(key.compareTo(SettingsActivity.KEY_PREF_ZOOM_VALUE) == 0)
-//            currentZoomValue = Integer.valueOf(sharedPref.getString(SettingsActivity.KEY_PREF_ZOOM_VALUE, "150"));
-//    }
-
-    /**
-     * Widens the graphs' view port
-     */
-    public void zoomIn(View view){
-        for (int i = 0; i < graphs.length; i++)
-            graphs[i].getGraphView().zoomIn(currentZoomValue);
-    }
-
-    /**
-     * Shortens the graphs' view port
-     */
-    public void zoomOut(View view){
-        double zoomOutValue = 66.6;
-        if(currentZoomValue == 200)
-            zoomOutValue = 50;
-        else if(currentZoomValue == 300)
-            zoomOutValue = 33.3;
-        else if(currentZoomValue == 400)
-            zoomOutValue = 25;
-        for (int i = 0; i < graphs.length; i++)
-            graphs[i].getGraphView().zoomOut(zoomOutValue);
-    }
-
-
-    @Override
-    protected void onPause() {
-        try {
-            unbindFromService();
-        } catch (Throwable t) {
-            Log.e(TAG, "failed to unbind from service when activity is destroyed", t);
-            displayConnectionErrorDialog(10); // 10 -> fatal error
-        }
-        super.onPause();
-        Log.i(TAG, "onPause()");
-    }
-
-
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        Log.i(TAG, "onSavedInstance");
-        outState.putLong(KEY_CHRONOMETER_BASE, chronometer.getBase());
-        super.onSaveInstanceState(outState);
-    }
-
-    /**
-     * Destroys activity
-     */
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        Log.i(TAG, "onDestroy()");
-    }
 
 }

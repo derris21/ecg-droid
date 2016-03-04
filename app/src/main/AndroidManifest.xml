@@ -32,11 +32,7 @@
             android:name=".activity.DashboardNewActivity"
             android:label="@string/title_activity_dashboard_new"
             android:theme="@style/AppTheme">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
         </activity>
 
         <service android:name=".services.AuthenticatorService">
@@ -52,7 +48,13 @@
         <activity
             android:name=".activity.RecordNewActivity"
             android:label="@string/title_activity_record_new"
-            android:theme="@style/AppTheme"></activity>
+            android:theme="@style/AppTheme">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
     </application>
 
 </manifest>
