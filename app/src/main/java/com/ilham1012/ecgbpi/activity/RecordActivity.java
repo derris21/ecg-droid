@@ -3,9 +3,12 @@ package com.ilham1012.ecgbpi.activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
@@ -16,6 +19,13 @@ import android.widget.Toast;
 
 import com.bitalino.comm.BITalinoDevice;
 import com.bitalino.comm.BITalinoFrame;
+import com.github.mikephil.charting.charts.LineChart;
+import com.github.mikephil.charting.components.YAxis;
+import com.github.mikephil.charting.data.Entry;
+import com.github.mikephil.charting.data.LineData;
+import com.github.mikephil.charting.data.LineDataSet;
+import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
+import com.github.mikephil.charting.utils.ColorTemplate;
 import com.ilham1012.ecgbpi.POJO.EcgRecord;
 import com.ilham1012.ecgbpi.RetrofitInterface.EcgRecordService;
 import com.ilham1012.ecgbpi.R;
@@ -77,9 +87,10 @@ public class RecordActivity extends RoboActivity {
     private Long tsLong;
     private String tempData = "";
 
-    private LineGraphSeries<DataPoint> series;
+//    private LineGraphSeries<DataPoint> series;
     private int lastX = 0;
-    private GraphView graph;
+//    private GraphView graph;
+    private LineChart rawChart;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -138,18 +149,60 @@ public class RecordActivity extends RoboActivity {
 
     private void initGraph(){
         // we get graph view instance
-        GraphView graph = (GraphView) findViewById(R.id.graph);
-        // data
-        series = new LineGraphSeries<DataPoint>();
-        graph.addSeries(series);
-        // customize a little bit viewport
-        Viewport viewport = graph.getViewport();
-        viewport.setYAxisBoundsManual(true);
-        viewport.setMinY(0);
-        viewport.setMaxY(600);
-        viewport.setScalable(true);
-        viewport.setScrollable(true);
+//        GraphView graph = (GraphView) findViewById(R.id.graph);
+//        // data
+//        series = new LineGraphSeries<DataPoint>();
+//        graph.addSeries(series);
+//        // customize a little bit viewport
+//        Viewport viewport = graph.getViewport();
+//        viewport.setYAxisBoundsManual(true);
+//        viewport.setMinY(0);
+//        viewport.setMaxY(600);
+//        viewport.setScalable(true);
+//        viewport.setScrollable(true);
+        rawChart = (LineChart) findViewById(R.id.rawChart);
+        LineData data = new LineData();
+//        data.setValueTextColor(Color.WHITE);
+        rawChart.setData(data);
+    }
 
+    private void addEntry(int newdata) {
+        int GRAPH_WIDTH = 1000;
+        LineData data = rawChart.getData();
+
+        if (data != null) {
+            ILineDataSet set = data.getDataSetByIndex(0);
+
+            if (set == null) {
+                set = createSet();
+                data.addDataSet(set);
+            }
+
+            data.addEntry(new Entry(set.getEntryCount(), (float) newdata), 0);
+            rawChart.notifyDataSetChanged();
+
+            rawChart.setVisibleXRangeMaximum(GRAPH_WIDTH);
+            rawChart.moveViewToX(data.getEntryCount());
+//            rawChart.invalidate();
+        }
+    }
+
+    private LineDataSet createSet() {
+        LineDataSet set = new LineDataSet(null, "ECG");
+        set.setAxisDependency(YAxis.AxisDependency.LEFT);
+        set.setDrawValues(false);
+        set.setDrawCircles(false);
+        set.setColor(Color.MAGENTA);
+//        set.setColor(ColorTemplate.getHoloBlue());
+//        set.setCircleColor(Color.WHITE);
+//        set.setLineWidth(2f);
+//        set.setCircleRadius(4f);
+//        set.setFillAlpha(65);
+//        set.setFillColor(ColorTemplate.getHoloBlue());
+//        set.setHighLightColor(Color.rgb(244, 117, 117));
+//        set.setValueTextColor(Color.WHITE);
+//        set.setValueTextSize(9f);
+        return set;
     }
 
 
@@ -186,8 +239,8 @@ public class RecordActivity extends RoboActivity {
 
         checkExternalMedia();
         writeToSDFile();
-        uploadFile();
-        new PostRecordingTask().execute();
+//        uploadFile();
+//        new PostRecordingTask().execute();
     }
 
     /** Method to check whether external media available and writable. This is adapted from
@@ -302,7 +355,9 @@ public class RecordActivity extends RoboActivity {
         protected Void doInBackground(Void... paramses) {
             try {
                 // Let's get the remote Bluetooth device
-                final String remoteDevice = "98:D3:31:90:3E:00";
+                SharedPreferences SP = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
+                String strBluetoothDevice = SP.getString("bluetooth", "98:D3:31:B2:BB:7D"); //"98:D3:31:90:3E:00");
+                final String remoteDevice = strBluetoothDevice;
 
                 final BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
                 dev = btAdapter.getRemoteDevice(remoteDevice);
@@ -349,7 +404,6 @@ public class RecordActivity extends RoboActivity {
                     BITalinoFrame[] frames = bitalino.read(numberOfSamplesToRead);
 
 
-
                     // present data in screen
                     for (BITalinoFrame frame : frames) {
 //                        publishProgress(frame.toString());
@@ -376,8 +430,10 @@ public class RecordActivity extends RoboActivity {
         @Override
         protected void onProgressUpdate(Integer... values) {
 //            tvLog.append("\n".concat(values[0]));
-            series.appendData(new DataPoint(lastX++, values[0]), true, 1000);
-            Log.i("Graph", "Append " + lastX + ", " + values[0]);
+//            tvLog.setText(values[0]);
+//            series.appendData(new DataPoint(lastX++, values[0]), true, 1000);
+//            Log.i("Graph", "Append " + lastX + ", " + values[0]);
+            addEntry(values[0]);
         }
 
         @Override

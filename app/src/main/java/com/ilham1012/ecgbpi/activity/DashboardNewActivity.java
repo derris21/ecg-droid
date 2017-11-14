@@ -158,6 +158,9 @@ public class DashboardNewActivity extends AppCompatActivity {
                 Toast.makeText(getApplicationContext(),
                         clickedName, Toast.LENGTH_SHORT).show();
 
+                Intent i = new Intent(DashboardNewActivity.this, DisplaySignalActivity.class);
+                i.putExtra("recording_name", clickedName);
+                startActivity(i);
             }
         });
     }
@@ -195,7 +198,7 @@ public class DashboardNewActivity extends AppCompatActivity {
         // Handle item selection
         switch (item.getItemId()) {
             case R.id.settings:
-//                gotoSetting();
+                gotoSetting();
                 return true;
             case R.id.logout:
                 logoutUser();
@@ -205,6 +208,13 @@ public class DashboardNewActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Open Setting/Preference activity
+     */
+    private void gotoSetting() {
+        Intent i = new Intent(this, MyPreferencesActivity.class);
+        startActivity(i);
+    }
 
 
     /**

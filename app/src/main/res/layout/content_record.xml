@@ -31,10 +31,15 @@
             android:clickable="false"
             android:textColor="@color/asphalt"/>
 
-        <com.jjoe64.graphview.GraphView
-            android:id="@+id/graph"
+        <com.github.mikephil.charting.charts.LineChart
+            android:id="@+id/rawChart"
             android:layout_width="match_parent"
-            android:layout_height="300dp" />
+            android:layout_height="300dp"/>
+
+        <!--<com.jjoe64.graphview.GraphView-->
+            <!--android:id="@+id/graph"-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="300dp" />-->
 
     </LinearLayout>
 

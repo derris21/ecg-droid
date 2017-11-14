@@ -48,14 +48,6 @@
     <string name="title_activity_record_new">RecordNewActivity</string>
 
 
-
-
-
-
-
-
-
-
     <string name="divider_image_content">divider</string>
 
     <!-- ACTIVITIES LABELS -->
@@ -244,11 +236,11 @@
     <!-- CHANNELS LIST -->
     <string-array name="channels">
         <item> channel 1</item>
-        <item >channel 2</item>
-        <item >channel 3</item>
-        <item >channel 4</item>
-        <item >channel 5</item>
-        <item >channel 6</item>
+        <item>channel 2</item>
+        <item>channel 3</item>
+        <item>channel 4</item>
+        <item>channel 5</item>
+        <item>channel 6</item>
     </string-array>
 
     <!-- SENSORS LIST -->
@@ -286,5 +278,6 @@
 
     <!-- IDs -->
     <string name="service_id">this service unique id</string>
+    <string name="title_activity_display_signal">DisplaySignalActivity</string>
 
 </resources>
